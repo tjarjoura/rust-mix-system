@@ -1,5 +1,5 @@
 [package]
-name = "mix_emulator"
+name = "mix-system"
 version = "0.1.0"
 edition = "2024"
 
