@@ -1,14 +1,17 @@
+use std::str::FromStr;
+
 use anyhow::{Result, anyhow, bail};
 
 /// A Symbol represents a string of characters in the MIXAL assembly language that can
 /// "stand for" a raw numerical value. These will be replaced with the underlying values
 /// when assembled into MIX machine code.
 /// The parsing rules are as laid out in TAOCP Vol. I, p. 153
-pub struct Symbol(String);
+#[derive(Debug, PartialEq)]
+pub struct Symbol(pub String);
 impl Symbol {
     pub const MAX_LENGTH: usize = 10;
     pub fn new(s: &str) -> Result<Self, anyhow::Error> {
-        // TODO: It may make sense to create a proper error type, but using anyhow for nwo
+        // TODO: It may make sense to create a proper error type, but using anyhow for now
         if s.is_empty() {
             return Err(anyhow!("Cannot construct symbol from empty string"));
         }
@@ -39,6 +42,14 @@ impl Symbol {
     // uppercase characters are allowed.
     fn is_valid_char(c: char) -> bool {
         matches!(c, 'A'..='Z' | '0'..='9')
+    }
+}
+
+impl FromStr for Symbol {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Symbol::new(s)
     }
 }
 

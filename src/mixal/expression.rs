@@ -1,55 +1,22 @@
-use std::{fmt::Binary, str::FromStr};
+use std::str::FromStr;
 
+use crate::mixal::operator::UnaryOperator;
+
+use super::number::Number;
+use super::operator::BinaryOperator;
 use super::symbol::Symbol;
-enum UnaryOperator {
-    Plus,
-    Minus,
-}
 
-enum BinaryOperator {
-    Plus,
-    Minus,
-    Multiply,
-    IntDivide,
-    ScaledDivide,
-    Colon,
-}
-
-impl BinaryOperator {
-    /// Finds the leftmost Binary operator and returns the position and slice containining it
-    fn find_leftmost_in(s: &str) -> Option<(usize, &str)> {
-        let pos = s.find('+' | '-' | '*' | '/' | ':')?;
-        // first check for the double slash operator, since it has two characters we need to
-        // special case it
-        if let Some("//") = s.get(pos..pos + 2) {
-            Some((pos, &s[pos..pos + 2]))
-        // otherwise we know it's one character
-        } else {
-            Some((pos, &s[pos..pos + 1]))
-        }
-    }
-}
-
-impl FromStr for BinaryOperator {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "+" => Ok(BinaryOperator::Plus),
-            "-" => Ok(BinaryOperator::Minus),
-            "*" => Ok(BinaryOperator::Multiply),
-            "/" => Ok(BinaryOperator::IntDivide),
-            "//" => Ok(BinaryOperator::ScaledDivide),
-            ":" => Ok(BinaryOperator::Colon),
-            _ => anyhow::bail!("Unrecognized binary operator: {}", s),
-        }
-    }
-}
-
+/// Represents an expression in MIXAL assembly language
+/// An expression is either:
+///     An asterisk "*" -- which means the current memory location the assembler is writing to
+///     A symbol -- which is a name that points to some other value
+///     A number -- which is a string of at most 10 digits
+///     A binary or unary operator -- which recursively contain expressions that the operators act on
+#[derive(Debug, PartialEq)]
 enum Expression {
     Asterisk,
     Symbol(Symbol),
-    Number,
+    Number(Number),
     BinaryOperation(BinaryOperator, Box<Expression>, Box<Expression>),
     UnaryOperation(UnaryOperator, Box<Expression>),
 }
@@ -58,24 +25,71 @@ impl FromStr for Expression {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.starts_with('-') {
-            return Ok(Expression::UnaryOperation(
-                UnaryOperator::Minus,
+        if s == "*" {
+            Ok(Expression::Asterisk)
+        } else if UnaryOperator::starts_with(s) {
+            Ok(Expression::UnaryOperation(
+                s[0..1].parse()?,
                 Box::new(s[1..].parse()?),
-            ));
-        } else if s.starts_with('+') {
-            return Ok(Expression::UnaryOperation(
-                UnaryOperator::Plus,
-                Box::new(s[1..].parse()?),
-            ));
+            ))
         } else if let Some((pos, op)) = BinaryOperator::find_leftmost_in(s) {
-            return Ok(Expression::BinaryOperation(
+            Ok(Expression::BinaryOperation(
                 s[pos..pos + op.len()].parse()?,
                 Box::new(s[0..pos].parse()?),
                 Box::new(s[pos + 1..].parse()?),
-            ));
+            ))
+        } else if s.chars().all(|c| c.is_ascii_digit()) {
+            Ok(Expression::Number(s.parse()?))
         } else {
-            todo!();
+            Ok(Expression::Symbol(s.parse()?))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    pub use super::*;
+
+    #[test]
+    fn test_from_str() {
+        assert_eq!(
+            "34".parse::<Expression>().unwrap(),
+            Expression::Number(Number(34))
+        );
+        assert_eq!(
+            "34+7".parse::<Expression>().unwrap(),
+            Expression::BinaryOperation(
+                BinaryOperator::Plus,
+                Box::new(Expression::Number(Number(34))),
+                Box::new(Expression::Number(Number(7)))
+            )
+        );
+        assert_eq!(
+            "34+7-4".parse::<Expression>().unwrap(),
+            Expression::BinaryOperation(
+                BinaryOperator::Plus,
+                Box::new(Expression::Number(Number(34))),
+                Box::new(Expression::BinaryOperation(
+                    BinaryOperator::Minus,
+                    Box::new(Expression::Number(Number(7))),
+                    Box::new(Expression::Number(Number(4))),
+                ))
+            )
+        );
+        assert_eq!(
+            "-34+7-4".parse::<Expression>().unwrap(),
+            Expression::UnaryOperation(
+                UnaryOperator::Minus,
+                Box::new(Expression::BinaryOperation(
+                    BinaryOperator::Plus,
+                    Box::new(Expression::Number(Number(34))),
+                    Box::new(Expression::BinaryOperation(
+                        BinaryOperator::Minus,
+                        Box::new(Expression::Number(Number(7))),
+                        Box::new(Expression::Number(Number(4))),
+                    ))
+                ))
+            )
+        );
     }
 }
