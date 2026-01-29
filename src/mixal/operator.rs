@@ -36,12 +36,23 @@ pub enum BinaryOperator {
 
 impl BinaryOperator {
     /// Finds the leftmost Binary operator and returns the position and slice containining it
-    pub fn find_leftmost_in(s: &str) -> Option<(usize, &str)> {
-        let pos = s.find(['+', '-', '*', '/', ':'])?;
-        // first check for the double slash operator, since it has two characters we need to
+    pub fn find_rightmost_in(s: &str) -> Option<(usize, &str)> {
+        // if an '*' or '+' / '-' are found the beginning or end of the string, they should not
+        // be parsed as a binary operator, but rather a unary operator or the location specifier '*'
+        // A valid binary operation must have at least a single character on either side of the operator,
+        // therefore we only search the middle of the string
+
+        // check the length to ensure we don't slice an empty string and panic
+        // a valid binary operation has a minimum of three characters
+        if s.len() < 3 {
+            return None;
+        }
+
+        let pos = s[1..s.len() - 1].rfind(['+', '-', '*', '/', ':'])? + 1;
+        // check for the double slash operator, since it has two characters we need to
         // special case it
-        if let Some("//") = s.get(pos..pos + 2) {
-            Some((pos, &s[pos..pos + 2]))
+        if let Some("//") = s.get(pos - 1..pos + 1) {
+            Some((pos - 1, &s[pos - 1..pos + 1]))
         // otherwise we know it's one character
         } else {
             Some((pos, &s[pos..pos + 1]))
@@ -86,15 +97,21 @@ mod tests {
     }
 
     #[test]
-    fn test_binop_find_leftmost_in() {
-        assert_eq!(BinaryOperator::find_leftmost_in("3+4"), Some((1, "+")));
-        assert_eq!(BinaryOperator::find_leftmost_in("3"), None);
-        assert_eq!(BinaryOperator::find_leftmost_in("3*5+4"), Some((1, "*")));
-        assert_eq!(BinaryOperator::find_leftmost_in("37/5+4"), Some((2, "/")));
-        assert_eq!(BinaryOperator::find_leftmost_in("37//5+4"), Some((2, "//")));
-        assert_eq!(BinaryOperator::find_leftmost_in("102456:9"), Some((6, ":")));
-        assert_eq!(BinaryOperator::find_leftmost_in("9-7"), Some((1, "-")));
-        assert_eq!(BinaryOperator::find_leftmost_in(""), None);
+    fn test_binop_find_rightmost_in() {
+        assert_eq!(BinaryOperator::find_rightmost_in("3+4"), Some((1, "+")));
+        assert_eq!(BinaryOperator::find_rightmost_in("3"), None);
+        assert_eq!(BinaryOperator::find_rightmost_in("3*5+4"), Some((3, "+")));
+        assert_eq!(BinaryOperator::find_rightmost_in("37/5+4"), Some((4, "+")));
+        assert_eq!(
+            BinaryOperator::find_rightmost_in("37+5//4"),
+            Some((4, "//"))
+        );
+        assert_eq!(
+            BinaryOperator::find_rightmost_in("102456:9"),
+            Some((6, ":"))
+        );
+        assert_eq!(BinaryOperator::find_rightmost_in("9-7"), Some((1, "-")));
+        assert_eq!(BinaryOperator::find_rightmost_in(""), None);
     }
 
     #[test]

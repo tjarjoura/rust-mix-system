@@ -27,16 +27,16 @@ impl FromStr for Expression {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s == "*" {
             Ok(Expression::Asterisk)
-        } else if UnaryOperator::starts_with(s) {
-            Ok(Expression::UnaryOperation(
-                s[0..1].parse()?,
-                Box::new(s[1..].parse()?),
-            ))
-        } else if let Some((pos, op)) = BinaryOperator::find_leftmost_in(s) {
+        } else if let Some((pos, op)) = BinaryOperator::find_rightmost_in(s) {
             Ok(Expression::BinaryOperation(
                 s[pos..pos + op.len()].parse()?,
                 Box::new(s[0..pos].parse()?),
                 Box::new(s[pos + 1..].parse()?),
+            ))
+        } else if UnaryOperator::starts_with(s) {
+            Ok(Expression::UnaryOperation(
+                s[0..1].parse()?,
+                Box::new(s[1..].parse()?),
             ))
         } else if s.chars().all(|c| c.is_ascii_digit()) {
             Ok(Expression::Number(s.parse()?))
@@ -48,48 +48,90 @@ impl FromStr for Expression {
 
 #[cfg(test)]
 mod tests {
-    pub use super::*;
+    use super::*;
+
+    fn num(n: u32) -> Expression {
+        Expression::Number(Number(n))
+    }
+
+    fn binop(op: BinaryOperator, left: Expression, right: Expression) -> Expression {
+        Expression::BinaryOperation(op, Box::new(left), Box::new(right))
+    }
+
+    fn unop(op: UnaryOperator, expr: Expression) -> Expression {
+        Expression::UnaryOperation(op, Box::new(expr))
+    }
+
+    fn sym(s: &str) -> Expression {
+        Expression::Symbol(s.parse().unwrap())
+    }
 
     #[test]
     fn test_from_str() {
-        assert_eq!(
-            "34".parse::<Expression>().unwrap(),
-            Expression::Number(Number(34))
-        );
+        assert_eq!("34".parse::<Expression>().unwrap(), num(34));
         assert_eq!(
             "34+7".parse::<Expression>().unwrap(),
-            Expression::BinaryOperation(
-                BinaryOperator::Plus,
-                Box::new(Expression::Number(Number(34))),
-                Box::new(Expression::Number(Number(7)))
-            )
+            binop(BinaryOperator::Plus, num(34), num(7))
         );
         assert_eq!(
             "34+7-4".parse::<Expression>().unwrap(),
-            Expression::BinaryOperation(
-                BinaryOperator::Plus,
-                Box::new(Expression::Number(Number(34))),
-                Box::new(Expression::BinaryOperation(
-                    BinaryOperator::Minus,
-                    Box::new(Expression::Number(Number(7))),
-                    Box::new(Expression::Number(Number(4))),
-                ))
+            binop(
+                BinaryOperator::Minus,
+                binop(BinaryOperator::Plus, num(34), num(7)),
+                num(4),
             )
         );
         assert_eq!(
-            "-34+7-4".parse::<Expression>().unwrap(),
-            Expression::UnaryOperation(
-                UnaryOperator::Minus,
-                Box::new(Expression::BinaryOperation(
-                    BinaryOperator::Plus,
-                    Box::new(Expression::Number(Number(34))),
-                    Box::new(Expression::BinaryOperation(
-                        BinaryOperator::Minus,
-                        Box::new(Expression::Number(Number(7))),
-                        Box::new(Expression::Number(Number(4))),
-                    ))
-                ))
+            "-1+5*20/6".parse::<Expression>().unwrap(),
+            binop(
+                BinaryOperator::IntDivide,
+                binop(
+                    BinaryOperator::Multiply,
+                    binop(
+                        BinaryOperator::Plus,
+                        unop(UnaryOperator::Minus, num(1)),
+                        num(5)
+                    ),
+                    num(20),
+                ),
+                num(6),
             )
+        );
+        assert_eq!(
+            "X+1".parse::<Expression>().unwrap(),
+            binop(BinaryOperator::Plus, sym("X"), num(1))
+        );
+        assert_eq!(
+            "1+LABEL".parse::<Expression>().unwrap(),
+            binop(BinaryOperator::Plus, num(1), sym("LABEL"))
+        );
+        assert_eq!(
+            "A+B".parse::<Expression>().unwrap(),
+            binop(BinaryOperator::Plus, sym("A"), sym("B"))
+        );
+        assert_eq!(
+            "-X".parse::<Expression>().unwrap(),
+            unop(UnaryOperator::Minus, sym("X"))
+        );
+        assert_eq!(
+            "X*Y+Z".parse::<Expression>().unwrap(),
+            binop(
+                BinaryOperator::Plus,
+                binop(BinaryOperator::Multiply, sym("X"), sym("Y")),
+                sym("Z"),
+            )
+        );
+        assert_eq!(
+            "*+1".parse::<Expression>().unwrap(),
+            binop(BinaryOperator::Plus, Expression::Asterisk, num(1))
+        );
+        assert_eq!(
+            "*-5".parse::<Expression>().unwrap(),
+            binop(BinaryOperator::Minus, Expression::Asterisk, num(5))
+        );
+        assert_eq!(
+            "LABEL-*".parse::<Expression>().unwrap(),
+            binop(BinaryOperator::Minus, sym("LABEL"), Expression::Asterisk)
         );
     }
 }
