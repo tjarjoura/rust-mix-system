@@ -13,7 +13,7 @@ use super::symbol::Symbol;
 ///     A number -- which is a string of at most 10 digits
 ///     A binary or unary operator -- which recursively contain expressions that the operators act on
 #[derive(Debug, PartialEq)]
-enum Expression {
+pub enum Expression {
     Asterisk,
     Symbol(Symbol),
     Number(Number),

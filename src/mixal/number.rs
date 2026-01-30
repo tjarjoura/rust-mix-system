@@ -1,7 +1,5 @@
 use std::str::FromStr;
 
-use anyhow::anyhow;
-
 #[derive(Debug, PartialEq)]
 pub struct Number(pub u32);
 
