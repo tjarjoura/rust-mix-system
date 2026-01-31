@@ -80,7 +80,10 @@ impl FromStr for WValComponent {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let split = s.split('(');
+        //let split = s.split_inclusive('(').collect();
+        //if split.len() > 2 {
+        //    anyhow::bail!("Invalid syntax for WVal: {}", s);
+        //}
         todo!()
     }
 }
