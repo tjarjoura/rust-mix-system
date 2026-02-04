@@ -2,12 +2,13 @@ use std::str::FromStr;
 
 use anyhow::Result;
 
+use super::equ::Equ;
 use super::symbol::Symbol;
 
 pub enum MixInstruction {}
 pub enum Operation {
     Instruction(MixInstruction),
-    Equ,
+    Equ(Equ),
     Orig,
     Con,
     Alf,
@@ -18,8 +19,17 @@ impl FromStr for Operation {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        todo!();
-    }
+        // Some operations need an operand, some can just be an opcode
+        // We should just pass the remainder, whether it is an empty string or contains the operand,
+        // and let the constructor handle the empty string case
+        let (opcode, rest) = s.split_once(char::is_whitespace).unwrap_or((s, ""));
+
+        match opcode {
+            "EQU" => Ok(Operation::Equ(Equ{wval: rest.parse()?})),
+            _ => {
+                anyhow::bail!("Unrecognized OPCODE: {}", opcode);
+            }
+        }
 }
 
 /// Corresponds to one line of input in a MIXAL program
