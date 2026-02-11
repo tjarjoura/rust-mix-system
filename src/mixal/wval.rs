@@ -86,7 +86,7 @@ impl FromStr for WValComponent {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (field, idx) = Field::find_field_or_default(s)?;
+        let (field, idx) = Field::find_field_or_default(s, "0:5")?;
         Ok(WValComponent {
             expression: s[0..idx].parse()?,
             field,
@@ -187,10 +187,7 @@ mod tests {
         );
         assert_eq!(
             "X(1:1),Y(2:2)".parse::<WValInner>().unwrap(),
-            wval_inner(vec![
-                component("X", "(1:1)"),
-                component("Y", "(2:2)"),
-            ])
+            wval_inner(vec![component("X", "(1:1)"), component("Y", "(2:2)"),])
         );
         assert_eq!(
             "1(0:1),2(1:2),3(2:3)".parse::<WValInner>().unwrap(),

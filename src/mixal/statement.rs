@@ -2,17 +2,20 @@ use std::str::FromStr;
 
 use anyhow::Result;
 
+use super::con::Con;
+use super::end::End;
 use super::equ::Equ;
+use super::orig::Orig;
 use super::symbol::Symbol;
 
 pub enum MixInstruction {}
 pub enum Operation {
     Instruction(MixInstruction),
     Equ(Equ),
-    Orig,
-    Con,
+    Orig(Orig),
+    Con(Con),
     Alf,
-    End,
+    End(End),
 }
 
 impl FromStr for Operation {
@@ -25,11 +28,23 @@ impl FromStr for Operation {
         let (opcode, rest) = s.split_once(char::is_whitespace).unwrap_or((s, ""));
 
         match opcode {
-            "EQU" => Ok(Operation::Equ(Equ{wval: rest.parse()?})),
+            "EQU" => Ok(Operation::Equ(Equ {
+                wval: rest.parse()?,
+            })),
+            "ORIG" => Ok(Operation::Orig(Orig {
+                wval: rest.parse()?,
+            })),
+            "CON" => Ok(Operation::Con(Con {
+                wval: rest.parse()?,
+            })),
+            "END" => Ok(Operation::End(End {
+                wval: rest.parse()?,
+            })),
             _ => {
                 anyhow::bail!("Unrecognized OPCODE: {}", opcode);
             }
         }
+    }
 }
 
 /// Corresponds to one line of input in a MIXAL program

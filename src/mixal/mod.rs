@@ -1,8 +1,13 @@
+mod alf;
+mod con;
+mod end;
 mod equ;
 mod expression;
 mod field;
+mod instruction;
 mod number;
 mod operator;
+mod orig;
 mod statement;
 mod symbol;
 mod wval;

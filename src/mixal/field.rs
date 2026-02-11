@@ -2,6 +2,8 @@ use std::str::FromStr;
 
 use anyhow::Result;
 
+use crate::mixal::number::Number;
+
 use super::expression::Expression;
 
 #[derive(Debug, PartialEq)]
@@ -13,13 +15,13 @@ impl Field {
     /// Looks for an opening parenthesis in the given string, and parses the portion
     /// of the string from that index as a Field specifier, otherwise returns the
     /// default field specifier, which is equivalent to (0:5).
-    pub fn find_field_or_default(s: &str) -> Result<(Self, usize), anyhow::Error> {
+    pub fn find_field_or_default(s: &str, default: &str) -> Result<(Self, usize), anyhow::Error> {
         if let Some(idx) = s.find('(') {
             Ok((s[idx..].parse()?, idx))
         } else {
             Ok((
                 Self {
-                    expression: "0:5".parse()?,
+                    expression: default.parse()?,
                 },
                 s.len(), // implicitly found at the "end" of the string
             ))
@@ -75,7 +77,7 @@ mod tests {
     #[test]
     fn test_find_field_or_default() {
         assert_eq!(
-            Field::find_field_or_default("3+4(1:1)").unwrap(),
+            Field::find_field_or_default("3+4(1:1)", "0:5").unwrap(),
             (
                 Field {
                     expression: "1:1".parse().unwrap()
@@ -84,16 +86,16 @@ mod tests {
             )
         );
         assert_eq!(
-            Field::find_field_or_default("10024(3:5)").unwrap(),
+            Field::find_field_or_default("10024(3:5)", "4").unwrap(),
             (
                 Field {
-                    expression: "3:5".parse().unwrap()
+                    expression: "4".parse().unwrap()
                 },
                 5
             )
         );
         assert_eq!(
-            Field::find_field_or_default("10024").unwrap(),
+            Field::find_field_or_default("10024", "0:5").unwrap(),
             (
                 Field {
                     expression: "0:5".parse().unwrap()
@@ -102,7 +104,7 @@ mod tests {
             )
         );
         assert_eq!(
-            Field::find_field_or_default("").unwrap(),
+            Field::find_field_or_default("", "0:5").unwrap(),
             (
                 Field {
                     expression: "0:5".parse().unwrap()
@@ -110,6 +112,7 @@ mod tests {
                 0
             )
         );
-        assert!(Field::find_field_or_default("(%invalid%)").is_err());
+        assert!(Field::find_field_or_default("(%invalid%)", "0:5").is_err());
+        assert!(Field::find_field_or_default("", "0:").is_err());
     }
 }
