@@ -134,4 +134,17 @@ mod tests {
             binop(BinaryOperator::Minus, sym("LABEL"), Expression::Asterisk)
         );
     }
+
+    #[test]
+    fn test_from_str_errors() {
+        // Empty string
+        assert!("".parse::<Expression>().is_err());
+        // Invalid characters
+        assert!("abc".parse::<Expression>().is_err());
+        assert!("X@Y".parse::<Expression>().is_err());
+        // Trailing operator
+        assert!("5+".parse::<Expression>().is_err());
+        // Missing operand
+        assert!("5+*3".parse::<Expression>().is_err());
+    }
 }
