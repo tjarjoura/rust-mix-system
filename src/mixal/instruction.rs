@@ -1,3 +1,5 @@
+use crate::mixal::wval::WVal;
+
 use super::expression::Expression;
 use super::field::Field;
 
@@ -10,13 +12,17 @@ pub enum Sign {
 #[derive(Debug, PartialEq)]
 pub struct Address {
     pub sign: Sign,
-    pub address: Expression,
+    pub address: WVal,
     pub index: Expression,
     pub field: Field,
 }
 
 impl Address {
     pub fn new_with_default_field(s: &str, default_field: &str) -> anyhow::Result<Self> {
+        // how to handle trailing white space?
+        // we could just strip any trailing whitespace at the higher layer
+        // I was worried about ALF, but that only cares about leading whitespace, not trailing
+        // but if the char data includes trailing whitespaces, that would be stripped off
         let (sign, rest) = if s.starts_with('-') {
             (Sign::Negative, &s[1..])
         } else if s.starts_with('+') {
@@ -54,13 +60,14 @@ impl Address {
 /// Represents a MIX machine instruction to be assembled
 pub struct MixInstruction {
     pub operation_code: u8,
+    pub address: Address,
 }
 
 impl MixInstruction {
     /// Returns Some(MixInstruction) if opcode is recognized, None otherwise
     /// If opcode is recognized but there is an error in parsing, an error is
     /// returned
-    pub fn try_parse(opcode: &str, rest: &str) -> anyhow::Result<Option<Self>> {
+    pub fn try_parse(opcode: &str, rest: &str) -> anyhow::Result<Self> {
         let (operation_code, default_field) = match opcode {
             "NOP" => (0, "0:5"),
             "ADD" => (1, "0:5"),
@@ -212,11 +219,15 @@ impl MixInstruction {
             "CMP6" => (62, "0:5"),
             "CMPX" => (63, "0:5"),
             _ => {
-                return Ok(None);
+                anyhow::bail!("Unrecognized opcode: {}", opcode);
             }
         };
 
-        todo!()
+        let address = Address::new_with_default_field(rest, default_field)?;
+        Ok(MixInstruction {
+            operation_code,
+            address,
+        })
     }
 }
 
@@ -232,6 +243,10 @@ mod tests {
         s.parse().unwrap()
     }
 
+    fn wval(s: &str) -> WVal {
+        s.parse().unwrap()
+    }
+
     fn field(s: &str) -> Field {
         s.parse().unwrap()
     }
@@ -242,7 +257,7 @@ mod tests {
             addr("2000,2(0:3)", "0:5"),
             Address {
                 sign: Sign::Positive,
-                address: expr("2000"),
+                address: wval("2000"),
                 index: expr("2"),
                 field: field("(0:3)"),
             }
@@ -255,7 +270,7 @@ mod tests {
             addr("2000,2", "0:5"),
             Address {
                 sign: Sign::Positive,
-                address: expr("2000"),
+                address: wval("2000"),
                 index: expr("2"),
                 field: field("(0:5)"),
             }
@@ -268,7 +283,7 @@ mod tests {
             addr("2000(1:3)", "0:5"),
             Address {
                 sign: Sign::Positive,
-                address: expr("2000"),
+                address: wval("2000"),
                 index: expr("0"),
                 field: field("(1:3)"),
             }
@@ -281,7 +296,7 @@ mod tests {
             addr("2000", "0:5"),
             Address {
                 sign: Sign::Positive,
-                address: expr("2000"),
+                address: wval("2000"),
                 index: expr("0"),
                 field: field("(0:5)"),
             }
@@ -294,7 +309,7 @@ mod tests {
             addr("-2000,2(0:3)", "0:5"),
             Address {
                 sign: Sign::Negative,
-                address: expr("2000"),
+                address: wval("2000"),
                 index: expr("2"),
                 field: field("(0:3)"),
             }
@@ -307,7 +322,7 @@ mod tests {
             addr("+2000", "0:5"),
             Address {
                 sign: Sign::Positive,
-                address: expr("2000"),
+                address: wval("2000"),
                 index: expr("0"),
                 field: field("(0:5)"),
             }
@@ -320,7 +335,7 @@ mod tests {
             addr("", "0:5"),
             Address {
                 sign: Sign::Positive,
-                address: expr("0"),
+                address: wval("0"),
                 index: expr("0"),
                 field: field("(0:5)"),
             }
@@ -333,7 +348,7 @@ mod tests {
             addr("LABEL,2(1:3)", "0:5"),
             Address {
                 sign: Sign::Positive,
-                address: expr("LABEL"),
+                address: wval("LABEL"),
                 index: expr("2"),
                 field: field("(1:3)"),
             }
@@ -346,7 +361,7 @@ mod tests {
             addr("2000+5,3", "0:5"),
             Address {
                 sign: Sign::Positive,
-                address: expr("2000+5"),
+                address: wval("2000+5"),
                 index: expr("3"),
                 field: field("(0:5)"),
             }
@@ -359,7 +374,7 @@ mod tests {
             addr("2000", "1:3"),
             Address {
                 sign: Sign::Positive,
-                address: expr("2000"),
+                address: wval("2000"),
                 index: expr("0"),
                 field: field("(1:3)"),
             }
