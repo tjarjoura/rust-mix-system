@@ -1,4 +1,5 @@
 mod alf;
+pub mod assemble;
 mod con;
 mod end;
 mod equ;
