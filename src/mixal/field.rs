@@ -89,7 +89,7 @@ mod tests {
             Field::find_field_or_default("10024(3:5)", "4").unwrap(),
             (
                 Field {
-                    expression: "4".parse().unwrap()
+                    expression: "3:5".parse().unwrap()
                 },
                 5
             )
