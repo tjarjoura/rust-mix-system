@@ -9,7 +9,7 @@ impl Alf {
     /// to assemble.
     /// Should begin with one or two blank spaces, and then exactly 5 characters.
     /// If one blank space -- then the first character must be non blank
-    fn from_char_data(s: &str) -> anyhow::Result<Self> {
+    pub fn from_char_data(s: &str) -> anyhow::Result<Self> {
         let char_data = if s.starts_with("  ") {
             &s[2..]
         } else if s.starts_with(" ") {

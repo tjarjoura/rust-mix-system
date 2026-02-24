@@ -2,19 +2,20 @@ use std::str::FromStr;
 
 use anyhow::Result;
 
+use super::alf::Alf;
 use super::con::Con;
 use super::end::End;
 use super::equ::Equ;
+use super::instruction::MixInstruction;
 use super::orig::Orig;
 use super::symbol::Symbol;
 
-pub enum MixInstruction {}
 pub enum Operation {
     Instruction(MixInstruction),
     Equ(Equ),
     Orig(Orig),
     Con(Con),
-    Alf,
+    Alf(Alf),
     End(End),
 }
 
@@ -29,20 +30,22 @@ impl FromStr for Operation {
 
         match opcode {
             "EQU" => Ok(Operation::Equ(Equ {
-                wval: rest.parse()?,
+                wval: rest.trim().parse()?,
             })),
             "ORIG" => Ok(Operation::Orig(Orig {
-                wval: rest.parse()?,
+                wval: rest.trim().parse()?,
             })),
             "CON" => Ok(Operation::Con(Con {
-                wval: rest.parse()?,
+                wval: rest.trim().parse()?,
             })),
+            "ALF" => Ok(Operation::Alf(Alf::from_char_data(rest)?)),
             "END" => Ok(Operation::End(End {
-                wval: rest.parse()?,
+                wval: rest.trim().parse()?,
             })),
-            _ => {
-                anyhow::bail!("Unrecognized OPCODE: {}", opcode);
-            }
+            _ => Ok(Operation::Instruction(MixInstruction::try_parse(
+                opcode,
+                rest.trim(),
+            )?)),
         }
     }
 }
